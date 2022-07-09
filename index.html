@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Screen Sharing Demo | Metered Video</title>
+    <!-- Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
+
+    <!-- CSS Reset -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
+
+    <!-- Milligram CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.css">
+
+    <script type="text/javascript" src="https://cdn.metered.ca/sdk/video/1.4.5/sdk.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>WebRTC Screen Sharing Demo</h1>
+        <h3>
+            To learn how this application was built read <a href="https://www.metered.ca/blog/webrtc-screen-sharing/" target="_blank">WebRTC Screen Sharing with Javascript</a> 
+        </h3>
+        <p>
+            To get the Room URL, signup for a free <a href="https://www.metered.ca/" target="_blank">Metered Video</a> account.
+            Go to <a href="https://www.metered.ca">metered.ca</a> and click "Signup and Start Building" to create a free account.
+        </p>
+        <hr>
+        <div id="join-area" class="row">
+            <div class="column">
+                <label for="">Room URL</label>
+                <input id="room-url" type="text" placeholder="<app-name>.metered.live/<room-name>" />
+                <button id="join-room">Join Room</button>
+            </div>
+        </div>
+        <hr>
+        <div id="main-area" style="display: none;">
+            <div class="row">
+                <div class="column">
+                    <button id="share-screen">Share Screen</button>
+                </div>
+                <div class="column">
+                    <button id="share-microphone">Share Microphone</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="column">
+                    <button id="stop-screen-share" class="button-outline">Stop Screen Sharing</button>
+                </div>
+                <div class="column">
+                    <button id="stop-microphone" class="button-outline">Stop Microphone</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="column">
+                    <h3>Remote Video</h3>
+                    <div id="remote-video-container">
+    
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="column">
+                    <h3>Local Video</h3>
+                    <video src="" muted autoplay id="local-video" style="max-width: 800px"></video>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const meeting = new Metered.Meeting();
+
+
+        document.getElementById("join-room").addEventListener("click", async() => {
+            var roomURL = document.getElementById("room-url").value;
+            if (!roomURL) {
+                alert("Please specify room url")
+            }
+            try {
+                await meeting.join({
+                    roomURL: roomURL
+                });
+                document.getElementById("join-area").style.display = "none";
+                document.getElementById("main-area").style.display = "block";
+            } catch (ex) {
+                alert("Invalid room url");
+            }
+            
+        });
+
+        document.getElementById("share-screen").addEventListener("click", async () => {
+            await meeting.startScreenShare();
+        });
+
+        document.getElementById("stop-screen-share").addEventListener("click", async () => {
+            await meeting.stopVideo();
+        });
+
+        document.getElementById("share-microphone").addEventListener("click", async () => {
+            await meeting.startAudio();
+        });
+
+        document.getElementById("stop-microphone").addEventListener("click", async () => {
+            await meeting.stopAudio();
+        });
+
+        meeting.on("localTrackStarted", async (trackItem) => {
+            if (trackItem.type === "video") {
+                const mediaStream = new MediaStream();
+                mediaStream.addTrack(trackItem.track);
+                document.getElementById("local-video").srcObject = mediaStream;
+            }
+        });
+
+
+        meeting.on("localTrackUpdated", async (trackItem) => {
+            if (trackItem.type === "video") {
+                const mediaStream = new MediaStream();
+                mediaStream.addTrack(trackItem.track);
+                document.getElementById("local-video").srcObject = mediaStream;
+            }
+        });
+
+        meeting.on("remoteTrackStarted", async (trackItem) => {
+            debugger
+            var mediaStream = new MediaStream();
+            mediaStream.addTrack(trackItem.track);
+            var videoTag = document.createElement("video");
+            videoTag.autoplay = true;
+            videoTag.srcObject = mediaStream;
+            videoTag.id = trackItem.streamId;
+            videoTag.style.maxWidth = "1920px";
+            if (trackItem.type === "video") {
+                /**
+                 * If it is a video stream then set it to muted.
+                 * */
+                videoTag.muted = true;
+            } else {
+                videoTag.controls = true;
+            }
+            document.getElementById("remote-video-container").appendChild(videoTag);
+        });
+
+        meeting.on("remoteTrackStopped", async (trackItem) => {
+            document.getElementById(trackItem.streamId).remove();
+        });
+
+    </script>
+</body>
+</html>
